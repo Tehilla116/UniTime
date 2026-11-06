@@ -23,17 +23,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -50,16 +63,34 @@ fun UniTimeApp(viewModel: TimetableViewModel) {
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val preferences = context.getSharedPreferences("unitime_settings", android.content.Context.MODE_PRIVATE)
-    var reminderEnabled by remember(preferences) { mutableStateOf(preferences.getBoolean(KEY_REMINDERS_ENABLED, false)) }
-    var reminderLeadMinutes by remember(preferences) { mutableIntStateOf(preferences.getInt(KEY_REMINDER_LEAD_MINUTES, 15).takeIf { it == 5 || it == 15 || it == 30 } ?: 15) }
-    var formError by rememberSaveable { mutableStateOf<String?>(null) }
-    val selectedRoute = Route.valueOf(route)
     val permissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    var reminderEnabled by remember(preferences) { mutableStateOf(preferences.getBoolean(KEY_REMINDERS_ENABLED, false)) }
+    var reminderLeadMinutes by remember(preferences) {
+        mutableIntStateOf(preferences.getInt(KEY_REMINDER_LEAD_MINUTES, 15).takeIf { it == 5 || it == 15 || it == 30 } ?: 15)
+    }
+    var formError by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedRoute = Route.valueOf(route)
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         reminderEnabled = granted
         preferences.edit().putBoolean(KEY_REMINDERS_ENABLED, granted).apply()
         if (granted) entries.forEach { viewModel.scheduleReminder(it, reminderLeadMinutes) }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, preferences) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val enabled = preferences.getBoolean(KEY_REMINDERS_ENABLED, false)
+                val lead = preferences.getInt(KEY_REMINDER_LEAD_MINUTES, 15).takeIf { it == 5 || it == 15 || it == 30 } ?: 15
+                val allowed = permissionGranted && NotificationManagerCompat.from(context).areNotificationsEnabled()
+                if (enabled != reminderEnabled || lead != reminderLeadMinutes || reminderEnabled != allowed) {
+                    reminderEnabled = enabled && allowed
+                    reminderLeadMinutes = lead
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(bottomBar = {
@@ -173,15 +204,56 @@ private fun ClassFormScreen(
 ) {
     var title by rememberSaveable(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var weekdayName by rememberSaveable(existing?.id) { mutableStateOf(existing?.weekday?.name ?: Weekday.MONDAY.name) }
+    var weekdayMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var start by rememberSaveable(existing?.id) { mutableStateOf(existing?.startMinute?.let(::formatTime) ?: "09:00") }
     var end by rememberSaveable(existing?.id) { mutableStateOf(existing?.endMinute?.let(::formatTime) ?: "10:00") }
+    var timePickerTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var pickerHour by rememberSaveable { mutableIntStateOf(9) }
+    var pickerMinute by rememberSaveable { mutableIntStateOf(0) }
     var venue by rememberSaveable(existing?.id) { mutableStateOf(existing?.venue.orEmpty()) }
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(if (existing == null) "Add class" else "Edit class", style = MaterialTheme.typography.headlineMedium)
         OutlinedTextField(title, { title = it }, label = { Text("Class name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(weekdayName.lowercase().replaceFirstChar { it.uppercase() }, { raw -> weekdayName = Weekday.entries.firstOrNull { it.displayName.equals(raw, true) }?.name ?: raw.uppercase() }, label = { Text("Weekday (Monday–Sunday)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(start, { start = it }, label = { Text("Start time (HH:MM)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(end, { end = it }, label = { Text("End time (HH:MM)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        androidx.compose.foundation.layout.Box {
+            OutlinedButton(
+                onClick = { weekdayMenuExpanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Weekday (Monday–Sunday): ${Weekday.entries.first { it.name == weekdayName }.displayName}")
+            }
+            DropdownMenu(
+                expanded = weekdayMenuExpanded,
+                onDismissRequest = { weekdayMenuExpanded = false }
+            ) {
+                Weekday.entries.forEach { day ->
+                    DropdownMenuItem(
+                        text = { Text(day.displayName) },
+                        onClick = {
+                            weekdayName = day.name
+                            weekdayMenuExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = {
+                val current = parseTime(start).coerceAtLeast(0)
+                pickerHour = current / 60
+                pickerMinute = current % 60
+                timePickerTarget = "start"
+            },
+            modifier = Modifier.fillMaxWidth().testTag("start-time-picker")
+        ) { Text("Start time: ${formatTime(parseTime(start).coerceAtLeast(0))}") }
+        OutlinedButton(
+            onClick = {
+                val current = parseTime(end).coerceAtLeast(0)
+                pickerHour = current / 60
+                pickerMinute = current % 60
+                timePickerTarget = "end"
+            },
+            modifier = Modifier.fillMaxWidth().testTag("end-time-picker")
+        ) { Text("End time: ${formatTime(parseTime(end).coerceAtLeast(0))}") }
         OutlinedTextField(venue, { venue = it }, label = { Text("Venue (optional)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,6 +261,44 @@ private fun ClassFormScreen(
             OutlinedButton(onClick = onCancel) { Text("Cancel") }
             if (existing != null) OutlinedButton(onClick = { onDelete(existing.id) }) { Text("Delete") }
         }
+    }
+    timePickerTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { timePickerTarget = null },
+            title = { Text(if (target == "start") "Choose start time" else "Choose end time") },
+            text = {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LazyColumn(modifier = Modifier.weight(1f).height(220.dp).testTag("hour-options")) {
+                        items((0..23).toList(), key = { "hour-$it" }) { hour ->
+                            val label = "%02d".format(hour)
+                            Text(
+                                label,
+                                modifier = Modifier.fillMaxWidth().clickable { pickerHour = hour }.testTag("hour-option-$hour").padding(12.dp),
+                                color = if (pickerHour == hour) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    LazyColumn(modifier = Modifier.weight(1f).height(220.dp).testTag("minute-options")) {
+                        items((0..59).toList(), key = { "minute-$it" }) { minute ->
+                            val label = "%02d".format(minute)
+                            Text(
+                                label,
+                                modifier = Modifier.fillMaxWidth().clickable { pickerMinute = minute }.testTag("minute-option-$minute").padding(12.dp),
+                                color = if (pickerMinute == minute) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val value = formatTime(pickerHour * 60 + pickerMinute)
+                    if (target == "start") start = value else end = value
+                    timePickerTarget = null
+                }) { Text("Set time") }
+            },
+            dismissButton = { OutlinedButton(onClick = { timePickerTarget = null }) { Text("Cancel") } }
+        )
     }
 }
 

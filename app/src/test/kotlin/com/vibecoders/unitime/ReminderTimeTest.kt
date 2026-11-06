@@ -5,6 +5,8 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReminderTimeTest {
@@ -21,15 +23,38 @@ class ReminderTimeTest {
     }
 
     @Test
-    fun ifReminderTimeAlreadyPassedTodaySchedulesForNextWeek() {
-        val zone = ZoneId.of("UTC")
-        val now = ZonedDateTime.of(LocalDateTime.parse("2026-11-06T08:50:00"), zone)
+    fun rejectsUnsupportedLeadTime() {
+        val now = ZonedDateTime.of(LocalDateTime.parse("2026-11-06T08:00:00"), ZoneId.of("UTC"))
+        val failure = runCatching { nextReminderTime(Weekday.MONDAY, 9 * 60, 10, now) }.exceptionOrNull()
+        assertTrue(failure is IllegalArgumentException)
+    }
 
-        val scheduled = nextReminderTime(Weekday.FRIDAY, classStartMinute = 9 * 60, leadMinutes = 15, now = now)
+    @Test
+    fun rolloverClassBeforeFirstAvailableReminderTimeMovesReminderToPreviousDay() {
+        val now = ZonedDateTime.of(LocalDateTime.parse("2026-11-08T10:00:00"), ZoneId.of("UTC"))
+        val reminder = nextReminderTime(Weekday.MONDAY, classStartMinute = 10, leadMinutes = 15, now = now)
+        assertEquals(DayOfWeek.SUNDAY, reminder.dayOfWeek)
+        assertEquals(23, reminder.hour)
+        assertEquals(55, reminder.minute)
+        assertEquals(8, reminder.dayOfMonth)
+    }
 
-        assertEquals(DayOfWeek.FRIDAY, scheduled.dayOfWeek)
-        assertEquals(13, scheduled.dayOfMonth)
-        assertEquals(8, scheduled.hour)
-        assertEquals(45, scheduled.minute)
+    @Test
+    fun classStartingBeforeReminderLeadWindowUsesPreviousDayForNextWeek() {
+        val now = ZonedDateTime.of(LocalDateTime.parse("2026-11-06T08:00:00"), ZoneId.of("UTC"))
+        val reminder = nextReminderTime(Weekday.MONDAY, classStartMinute = 10, leadMinutes = 15, now = now)
+        assertEquals(DayOfWeek.SUNDAY, reminder.dayOfWeek)
+        assertEquals(23, reminder.hour)
+        assertEquals(55, reminder.minute)
+        assertEquals(8, reminder.dayOfMonth)
+    }
+
+    @Test
+    fun firstUpcomingClassDoesNotRepeatEveryWeek() {
+        val now = ZonedDateTime.of(LocalDateTime.parse("2026-11-08T10:00:00"), ZoneId.of("UTC"))
+        val reminder = nextReminderTime(Weekday.MONDAY, classStartMinute = 9 * 60, leadMinutes = 15, now = now)
+        assertEquals(9, reminder.dayOfMonth)
+        assertEquals(DayOfWeek.MONDAY, reminder.dayOfWeek)
+        assertTrue(reminder.isAfter(now))
     }
 }

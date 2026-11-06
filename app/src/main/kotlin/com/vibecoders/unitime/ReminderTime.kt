@@ -12,21 +12,22 @@ fun nextReminderTime(
     require(classStartMinute in 0 until 24 * 60) { "Class start time is invalid" }
     require(leadMinutes == 5 || leadMinutes == 15 || leadMinutes == 30) { "Choose 5, 15, or 30 minutes" }
 
-    val reminderMinute = classStartMinute - leadMinutes
-    val day = when (weekday) {
-        Weekday.MONDAY -> java.time.DayOfWeek.MONDAY
-        Weekday.TUESDAY -> java.time.DayOfWeek.TUESDAY
-        Weekday.WEDNESDAY -> java.time.DayOfWeek.WEDNESDAY
-        Weekday.THURSDAY -> java.time.DayOfWeek.THURSDAY
-        Weekday.FRIDAY -> java.time.DayOfWeek.FRIDAY
-        Weekday.SATURDAY -> java.time.DayOfWeek.SATURDAY
-        Weekday.SUNDAY -> java.time.DayOfWeek.SUNDAY
+    val firstClassDay = now.with(TemporalAdjusters.nextOrSame(weekday.toJavaDayOfWeek())).toLocalDate()
+    var classDate = firstClassDay.atTime(classStartMinute / 60, classStartMinute % 60).atZone(now.zone)
+    var reminderAt = classDate.minusMinutes(leadMinutes.toLong())
+    if (!reminderAt.isAfter(now)) {
+        classDate = classDate.plusWeeks(1)
+        reminderAt = classDate.minusMinutes(leadMinutes.toLong())
     }
-    var candidate = now.with(TemporalAdjusters.nextOrSame(day))
-        .withHour(reminderMinute / 60)
-        .withMinute(reminderMinute % 60)
-        .withSecond(0)
-        .withNano(0)
-    if (!candidate.isAfter(now)) candidate = candidate.plusWeeks(1)
-    return candidate
+    return reminderAt
+}
+
+private fun Weekday.toJavaDayOfWeek(): java.time.DayOfWeek = when (this) {
+    Weekday.MONDAY -> java.time.DayOfWeek.MONDAY
+    Weekday.TUESDAY -> java.time.DayOfWeek.TUESDAY
+    Weekday.WEDNESDAY -> java.time.DayOfWeek.WEDNESDAY
+    Weekday.THURSDAY -> java.time.DayOfWeek.THURSDAY
+    Weekday.FRIDAY -> java.time.DayOfWeek.FRIDAY
+    Weekday.SATURDAY -> java.time.DayOfWeek.SATURDAY
+    Weekday.SUNDAY -> java.time.DayOfWeek.SUNDAY
 }

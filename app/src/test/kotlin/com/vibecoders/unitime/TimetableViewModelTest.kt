@@ -47,6 +47,7 @@ private class FakeClassEntryDao : ClassEntryDao {
     private val stream = MutableStateFlow<List<ClassEntryEntity>>(emptyList())
 
     override fun observeAll(): Flow<List<ClassEntryEntity>> = stream
+    override suspend fun getClassEntry(entryId: String) = data[entryId]
     override suspend fun getAll() = data.values.toList()
     override suspend fun upsert(entry: ClassEntryEntity) {
         data[entry.id] = entry

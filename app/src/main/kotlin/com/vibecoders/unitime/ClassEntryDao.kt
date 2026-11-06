@@ -11,6 +11,9 @@ interface ClassEntryDao {
     @Query("SELECT * FROM class_entries ORDER BY weekday, startMinute, title")
     fun observeAll(): Flow<List<ClassEntryEntity>>
 
+    @Query("SELECT * FROM class_entries WHERE id = :entryId")
+    suspend fun getClassEntry(entryId: String): ClassEntryEntity?
+
     @Query("SELECT * FROM class_entries ORDER BY weekday, startMinute, title")
     suspend fun getAll(): List<ClassEntryEntity>
 

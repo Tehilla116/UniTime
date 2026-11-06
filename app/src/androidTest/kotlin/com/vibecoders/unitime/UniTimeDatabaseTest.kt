@@ -55,7 +55,7 @@ class UniTimeDatabaseTest {
 
         val reopenedDatabase = Room.databaseBuilder(context, UniTimeDatabase::class.java, databaseName).build()
         try {
-            assertEquals(expected, reopenedDatabase.classEntryDao().getAll().single())
+            assertEquals(expected, reopenedDatabase.classEntryDao().getClassEntry(expected.id))
         } finally {
             reopenedDatabase.close()
             context.deleteDatabase(databaseName)

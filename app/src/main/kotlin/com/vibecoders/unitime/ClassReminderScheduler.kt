@@ -61,11 +61,17 @@ class ClassReminderWorker(context: Context, params: WorkerParameters) : Coroutin
             ?: return Result.failure()
         val start = inputData.getInt(KEY_START_MINUTE, -1)
         val lead = inputData.getInt(KEY_LEAD_MINUTES, -1)
-        if (start !in 0 until 24 * 60 || lead !in 0..180) return Result.failure()
+        if (start !in 0 until 24 * 60 || lead !in setOf(5, 15, 30)) return Result.failure()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            applicationContext.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return Result.success()
 
         val database = Room.databaseBuilder(applicationContext, UniTimeDatabase::class.java, "unitime.db").build()
         val currentEntry = try {
-            database.classEntryDao().getAll().firstOrNull { it.id == entryId }?.toModel()
+            database.classEntryDao().getClassEntry(entryId)?.toModel()
+        } catch (exception: Exception) {
+            return Result.retry()
         } finally {
             database.close()
         } ?: return Result.success()
