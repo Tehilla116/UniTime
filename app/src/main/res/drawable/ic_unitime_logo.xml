@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Clock dial -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M54,24.5 A29.5,29.5 0,1 1,54,83.5 A29.5,29.5 0,1 1,54,24.5" />
+
+    <!-- Calendar page overlaid on clock: timetable plus time -->
+    <path android:fillColor="#54D6B1" android:pathData="M68.5,65.5 h22 a3.5,3.5 0,0 1,3.5 3.5 v19 a3.5,3.5 0,0 1,-3.5 3.5 h-22 a3.5,3.5 0,0 1,-3.5 -3.5 v-19 a3.5,3.5 0,0 1,3.5 -3.5 z" />
+    <path android:fillColor="#102D3D" android:pathData="M69.5,73 h21 v17 h-21 z" />
+    <path android:fillColor="#F4F5F0" android:pathData="M73,77 h3 v3 h-3 z M81,77 h3 v3 h-3 z M73,83 h3 v3 h-3 z M81,83 h3 v3 h-3 z" />
+
+    <!-- Clock hands -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4.6"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L54,36 M54,54 L67,59" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M58,54 A4,4 0,1 1,50 54 A4,4 0,1 1,58 54" />
+
+    <!-- Seven mint marks for the week -->
+    <path android:fillColor="#54D6B1" android:pathData="M51.5,13 h5 v7 h-5 z M24.2,24 l3.6,-3.6 5,5 -3.6,3.6 z M13,51.5 h7 v5 h-7 z M24.2,84 l5,-5 3.6,3.6 -5,5 z M78,84 l3.6,-3.6 5,5 -3.6,3.6 z M88,51.5 h7 v5 h-7 z M78,25.4 l5,-5 3.6,3.6 -5,5 z" />
+</vector>

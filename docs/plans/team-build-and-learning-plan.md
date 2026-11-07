@@ -16,6 +16,11 @@
 - **Lecturer approval:** user explicitly confirmed on 6 November that UniTime is approved.
 - **Fresh project state (6 November):** `com.vibecoders.unitime` package, Today/Week/Add/Edit/Settings Compose screens, validation/overlap model, Room entity/DAO/database/repository, and baseline tests are implemented. Core screens install/run on Pixel 10 Pro XL API 37 emulator. Unit tests, debug build, and connected UI/database tests passed.
 - **Still outstanding:** GitHub remote/member access and five individual commits; student numbers in proposal; README/research notes; notification feature; fresh-clone review; demo video and peer ratings. Room persists class entries; end-to-end close/reopen process was not yet verified (Activity recreation test passed).
+- [x] Friday 6 November — optional reminders implemented with WorkManager, notification channel/permission flow and denial-safe settings; runtime delivery still needs demo evidence.
+- [x] Saturday 7 November — replaced manual weekday entry and time typing with a weekday dropdown and scrollable hour/minute picker; connected journey test selects Friday, 22:35–22:40, and saves it.
+- [x] Saturday 7 November — created UniTime clock/calendar logo, adaptive launcher icon and AndroidX splash-screen theme; connected branding smoke test passes.
+- [ ] Remaining Day 5–7 checks: actual reminder delivery demo; README and researched notes; clean-clone rehearsal; shared member contributions; interview/demo/submission deliverables.
+
 ## Day 1–4 archived checklist status (reviewed 6 November; re-run 6 November after approval)
 
 The original Day 1–4 sheets are retained under `archive/original-daily-checklists/`. The first snapshot recorded only what was known before approval. The user has since confirmed lecturer approval and directed a fresh Android project in this canonical folder; the existing `/Year 3/CampusConnectMVP/` scaffold remains untouched.
