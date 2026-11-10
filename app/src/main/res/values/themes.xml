@@ -12,7 +12,7 @@
 
     <style name="Theme_UniTime_Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/unitime_navy</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_unitime_logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/unitime_splash_288x288</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/unitime_navy</item>
         <item name="postSplashScreenTheme">@style/Theme_UniTime</item>
     </style>
